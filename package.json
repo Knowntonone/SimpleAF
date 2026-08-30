@@ -1,0 +1,14 @@
+{
+  "name": "simpleaf-server",
+  "version": "1.0.0",
+  "description": "Operator console for the SimpleAF implant (authorized lab use only)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.22.1"
+  },
+  "author": "Knowntonone",
+  "license": "MIT"
+}

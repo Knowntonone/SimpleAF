@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SimpleAF — Remote Administration Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════════ */
+:root {
+  --bg:   #04040C;
+  --s1:   #070710;
+  --s2:   #0C0C1A;
+  --s3:   #111124;
+  --s4:   #16162C;
+  --s5:   #1B1B34;
+
+  --bd:    rgba(255,255,255,0.08);
+  --bd-md: rgba(255,255,255,0.15);
+  --bd-hi: rgba(255,255,255,0.25);
+
+  /* Crimson brand */
+  --red:     #C5111C;
+  --red-2:   #E0182A;
+  --red-3:   #F52535;
+  --red-lo:  rgba(197,17,28,0.12);
+  --red-mid: rgba(197,17,28,0.22);
+  --red-glow:rgba(197,17,28,0.40);
+  --red-edge:rgba(197,17,28,0.55);
+
+  /* HIGH CONTRAST TEXT — key fix */
+  --t1: #F5F7FF;      /* primary text — near white */
+  --t2: #C8CFE8;      /* secondary — properly visible */
+  --t3: #8A94B8;      /* tertiary — visible muted */
+  --t4: #4E5878;      /* disabled/placeholder */
+
+  /* Terminal accents */
+  --tg:    #00FF88;
+  --tg-lo: rgba(0,255,136,0.09);
+  --tg-bd: rgba(0,255,136,0.30);
+  --tg-gl: rgba(0,255,136,0.20);
+  --ta:    #FFB300;
+  --tb:    #3DA8FF;
+  --tp:    #C084FC;
+  --tr:    #FF4444;
+
+  /* Fonts */
+  --fd: 'Barlow Condensed', sans-serif;
+  --fb: 'Barlow', sans-serif;
+  --fm: 'JetBrains Mono', monospace;
+
+  --spring: cubic-bezier(0.34, 1.52, 0.64, 1);
+  --ease:   cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: var(--bg);
+  font-family: var(--fb);
+  color: var(--t1);
+  font-size: 13px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--s5); border-radius: 10px; }
+::selection { background: var(--red-lo); color: var(--red-3); }
+
+/* ══════════════════════════════════════════════
+   BACKGROUND LAYERS
+══════════════════════════════════════════════ */
+#bgCanvas {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  animation: cfade 1.8s ease 0.3s both;
+}
+@keyframes cfade { from { opacity:0; } to { opacity:1; } }
+
+/* Radial vignette */
+.vig {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse 75% 75% at 50% 50%, transparent 35%, rgba(4,4,12,0.82) 100%);
+}
+
+/* Ambient crimson halo — bottom left */
+.halo-red {
+  position: fixed; bottom: -100px; left: -60px; z-index: 1; pointer-events: none;
+  width: 600px; height: 360px;
+  background: radial-gradient(ellipse, rgba(197,17,28,0.18) 0%, transparent 70%);
+  filter: blur(48px);
+  animation: halo 7s ease-in-out infinite;
+}
+/* Teal halo — terminal zone */
+.halo-teal {
+  position: fixed; top: 80px; right: 260px; z-index: 1; pointer-events: none;
+  width: 500px; height: 320px;
+  background: radial-gradient(ellipse, rgba(0,255,136,0.07) 0%, transparent 70%);
+  filter: blur(60px);
+  animation: halo 9s ease-in-out 3s infinite;
+}
+@keyframes halo {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:0.55; transform:scale(1.1); }
+}
+
+/* ══════════════════════════════════════════════
+   APP GRID
+══════════════════════════════════════════════ */
+.app {
+  position: relative; z-index: 2;
+  display: grid;
+  grid-template-rows: 62px 1fr 26px;
+  grid-template-columns: 258px 1fr 244px;
+  height: 100vh; width: 100vw;
+}
+
+/* ══════════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════════ */
+.hdr {
+  grid-column: 1/-1;
+  display: flex; align-items: center;
+  padding: 0 20px;
+  background: rgba(7,7,16,0.96);
+  border-bottom: 1px solid var(--bd);
+  backdrop-filter: blur(14px);
+  position: relative; z-index: 100;
+  box-shadow: 0 1px 0 var(--red-edge), 0 4px 40px rgba(0,0,0,0.85);
+  animation: hdr-drop 550ms var(--ease) both;
+}
+@keyframes hdr-drop { from { opacity:0; transform:translateY(-100%); } to { opacity:1; transform:translateY(0); } }
+
+.hdr::before {
+  content: '';
+  position: absolute; left:0; top:0; bottom:0; width:4px;
+  background: linear-gradient(180deg, var(--red-3) 0%, var(--red) 55%, transparent 100%);
+}
+
+/* ─── BRAND ─── */
+.brand {
+  display: flex; align-items: center; gap: 13px;
+  padding-right: 22px; margin-right: 18px;
+  border-right: 1px solid var(--bd);
+  text-decoration: none; user-select: none; flex-shrink: 0;
+}
+
+/* AF Logo mark — the actual icon with "AF" inside */
+.af-logo {
+  width: 42px; height: 42px; flex-shrink: 0; position: relative;
+}
+.af-logo svg { width: 100%; height: 100%; }
+
+.brand-words { display: flex; flex-direction: column; gap: 1px; }
+.brand-row   { display: flex; align-items: baseline; line-height: 1; }
+
+.b-simple {
+  font-family: var(--fd); font-weight: 700; font-size: 22px;
+  color: var(--t1); letter-spacing: 1.5px; text-transform: uppercase;
+}
+.b-af {
+  font-family: var(--fd); font-weight: 900; font-size: 22px;
+  background: linear-gradient(135deg, #FF3D4E 0%, var(--red-2) 55%, #FF6070 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 1px; text-transform: uppercase; margin-left: 3px;
+}
+.brand-cap {
+  font-family: var(--fm); font-size: 9px; font-weight: 300;
+  color: var(--t3); letter-spacing: 2.5px; text-transform: uppercase; margin-top: 2px;
+}
+
+/* Stats */
+.hdr-stats { display: flex; align-items: center; gap: 4px; }
+
+.stat {
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--bd);
+  transition: border-color 200ms;
+}
+.stat:hover { border-color: var(--bd-md); }
+.st-lbl {
+  font-family: var(--fd); font-size: 11px; font-weight: 700;
+  color: var(--t3); letter-spacing: 1.5px; text-transform: uppercase;
+}
+.st-track { width: 36px; height: 2px; background: var(--s5); overflow: hidden; }
+.st-fill  { height: 100%; transition: width 700ms var(--ease); background: var(--red-2); }
+.st-fill.g { background: var(--tg); }
+/* HIGH CONTRAST stat number */
+.st-num {
+  font-family: var(--fm); font-size: 11.5px; font-weight: 400;
+  color: var(--t1); min-width: 50px;
+}
+
+.vr { width:1px; height:22px; background:var(--bd); margin:0 12px; flex-shrink:0; }
+
+/* Live pill */
+.live-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 15px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--bd-md);
+  font-family: var(--fd); font-size: 12px; font-weight: 700;
+  color: var(--t3); letter-spacing: 2px; text-transform: uppercase;
+  transition: all 280ms;
+}
+.live-pill.on {
+  background: var(--red-lo); border-color: var(--red-edge); color: var(--red-3);
+  box-shadow: 0 0 20px var(--red-lo);
+  animation: pill-breathe 3s ease-in-out infinite;
+}
+@keyframes pill-breathe {
+  0%,100% { box-shadow: 0 0 16px var(--red-lo); }
+  50%      { box-shadow: 0 0 36px var(--red-mid); }
+}
+.pdot { width:7px; height:7px; border-radius:50%; background:var(--t4); transition: all 300ms; }
+.pdot.on {
+  background: var(--red-2); box-shadow: 0 0 0 3px var(--red-lo);
+  animation: dot-blink 2.2s ease-in-out infinite;
+}
+@keyframes dot-blink {
+  0%,100% { box-shadow:0 0 0 3px var(--red-lo); }
+  50%      { box-shadow:0 0 0 6px rgba(197,17,28,0.06); }
+}
+
+.hdr-right { margin-left:auto; display:flex; align-items:center; gap:14px; }
+/* HIGH CONTRAST clock */
+.clock-t { font-family:var(--fm); font-size:15px; color:var(--t1); letter-spacing:1px; text-align:right; line-height:1; }
+.clock-d { font-family:var(--fm); font-size:9px; color:var(--t3); margin-top:3px; text-align:right; letter-spacing:1px; text-transform:uppercase; }
+
+/* ══════════════════════════════════════════════
+   SESSIONS PANEL
+══════════════════════════════════════════════ */
+.sessions {
+  grid-row:2; grid-column:1;
+  display:flex; flex-direction:column;
+  background: rgba(7,7,16,0.94); border-right:1px solid var(--bd);
+  backdrop-filter: blur(10px); overflow:hidden;
+  animation: panel-l 480ms var(--spring) 180ms both;
+}
+@keyframes panel-l { from{opacity:0;transform:translateX(-18px);}to{opacity:1;transform:translateX(0);} }
+
+.panel-top {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:13px 16px; border-bottom:1px solid var(--bd); flex-shrink:0;
+}
+/* HIGH CONTRAST panel label */
+.panel-lbl {
+  font-family:var(--fd); font-size:11px; font-weight:700;
+  color: var(--t2); letter-spacing:2.5px; text-transform:uppercase;
+}
+.sess-chip {
+  font-family:var(--fm); font-size:10px; color:var(--red-2);
+  background:var(--red-lo); border:1px solid var(--red-edge);
+  padding:1px 9px;
+}
+
+.sess-scroll { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:5px; }
+
+.empty-v {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:14px; padding:40px 16px; text-align:center;
+}
+.empty-ico {
+  width:50px; height:50px;
+  background:rgba(255,255,255,0.025); border:1px solid var(--bd);
+  display:flex; align-items:center; justify-content:center; color:var(--t3);
+  animation: ico-pulse 4s ease-in-out infinite;
+}
+@keyframes ico-pulse { 0%,100%{border-color:var(--bd);}50%{border-color:var(--bd-md);} }
+/* HIGH CONTRAST empty text */
+.empty-h { font-family:var(--fd); font-size:14px; font-weight:700; color:var(--t2); letter-spacing:1px; text-transform:uppercase; }
+.empty-p { font-size:12px; color:var(--t3); line-height:1.6; }
+
+/* Session card */
+.sc {
+  padding:11px 13px;
+  background:rgba(255,255,255,0.03); border:1px solid var(--bd);
+  cursor:pointer; user-select:none;
+  transition: background 160ms, border-color 160ms, transform 220ms var(--spring), box-shadow 220ms;
+  position:relative; overflow:hidden;
+  animation: sc-in 250ms var(--spring) both;
+}
+@keyframes sc-in { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+.sc:hover { background:rgba(255,255,255,0.055); border-color:var(--bd-md); transform:translateY(-2px); box-shadow:0 8px 28px rgba(0,0,0,0.6); }
+.sc.active { background:var(--red-lo); border-color:var(--red-edge); transform:translateY(-2px); box-shadow:0 0 30px rgba(197,17,28,0.22), 0 8px 28px rgba(0,0,0,0.6); }
+.sc.active::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:linear-gradient(180deg, var(--red-3), var(--red));
+  animation: bar-in 220ms var(--spring) both;
+}
+@keyframes bar-in { from{transform:scaleY(0);}to{transform:scaleY(1);} }
+.sc-shim {
+  position:absolute; inset:0;
+  background:linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.04) 50%, transparent 60%);
+  transform:translateX(-120%); transition:transform 450ms var(--ease);
+}
+.sc:hover .sc-shim { transform:translateX(120%); }
+
+.sc-row { display:flex; align-items:center; gap:9px; margin-bottom:8px; }
+.sc-av {
+  width:32px; height:32px;
+  background:var(--s3); border:1px solid var(--bd-md);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  font-family:var(--fm); font-size:10px;
+  /* HIGH CONTRAST avatar text */
+  color:var(--t2);
+}
+.sc.active .sc-av { border-color:var(--red-edge); color:var(--red-3); background:var(--red-lo); }
+.sc-info { flex:1; min-width:0; }
+/* HIGH CONTRAST hostname */
+.sc-host { font-family:var(--fd); font-size:13px; font-weight:700; color:var(--t1); letter-spacing:0.5px; text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sc-ip   { font-family:var(--fm); font-size:10px; color:var(--t3); margin-top:1px; }
+.sc-live { width:8px; height:8px; background:var(--tg); box-shadow:0 0 8px var(--tg-gl); flex-shrink:0; animation:dot-blink 2.2s ease-in-out infinite; }
+.sc-foot { display:flex; align-items:center; gap:6px; }
+.sc-tag  { font-family:var(--fm); font-size:9px; color:var(--t3); background:var(--s3); border:1px solid var(--bd); padding:1px 7px; }
+.sc-tag.on { color:var(--tg); background:var(--tg-lo); border-color:var(--tg-bd); }
+/* HIGH CONTRAST username */
+.sc-usr { font-family:var(--fm); font-size:10px; color:var(--t3); margin-left:auto; }
+
+/* ══════════════════════════════════════════════
+   WORKSPACE
+══════════════════════════════════════════════ */
+.workspace {
+  grid-row:2; grid-column:2;
+  display:flex; flex-direction:column;
+  background:transparent; overflow:hidden;
+  animation: ws-in 480ms var(--ease) 120ms both;
+}
+@keyframes ws-in { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+
+/* Toolbar */
+.toolbar {
+  display:flex; align-items:center; padding:8px 14px; gap:5px;
+  background:rgba(7,7,16,0.95); border-bottom:1px solid var(--bd);
+  backdrop-filter:blur(8px); flex-shrink:0;
+}
+.tg { display:flex; align-items:center; gap:3px; padding-right:10px; margin-right:4px; border-right:1px solid var(--bd); }
+.tg:last-child { border-right:none; margin-left:auto; padding-right:0; margin-right:0; }
+
+.btn {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 13px;
+  background:rgba(255,255,255,0.05); border:1px solid var(--bd-md);
+  /* HIGH CONTRAST button text */
+  color: var(--t2);
+  font-family:var(--fd); font-size:12px; font-weight:600;
+  letter-spacing:1.5px; text-transform:uppercase;
+  cursor:pointer; user-select:none; white-space:nowrap;
+  transition: color 140ms, background 140ms, border-color 140ms, box-shadow 180ms, transform 200ms var(--spring);
+  position:relative; overflow:hidden;
+}
+.btn svg { flex-shrink:0; transition:transform 220ms var(--spring); }
+.btn:hover { background:rgba(255,255,255,0.09); border-color:var(--bd-hi); color:var(--t1); transform:translateY(-1px); box-shadow:0 4px 18px rgba(0,0,0,0.55); }
+.btn:hover svg { transform:scale(1.18); }
+.btn:active { transform:scale(0.97); box-shadow:none; }
+.btn.red { background:linear-gradient(160deg, var(--red-2) 0%, var(--red) 100%); border-color:var(--red-3); color:#fff; box-shadow:0 4px 22px var(--red-glow), inset 0 1px 0 rgba(255,255,255,0.1); }
+.btn.red:hover { background:linear-gradient(160deg, var(--red-3) 0%, var(--red-2) 100%); box-shadow:0 6px 30px rgba(197,17,28,0.55), inset 0 1px 0 rgba(255,255,255,0.15); transform:translateY(-2px); }
+.btn.dng:hover { background:rgba(255,68,68,0.08); border-color:rgba(255,68,68,0.30); color:var(--tr); }
+
+/* Ripple */
+.rip { position:relative; overflow:hidden; }
+.rip-w {
+  position:absolute; border-radius:50%;
+  transform:scale(0); pointer-events:none;
+  animation: rip-x 600ms var(--ease) forwards;
+}
+@keyframes rip-x { to{transform:scale(5);opacity:0;} }
+
+/* ── WELCOME ── */
+.welcome {
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:40px 24px; gap:0;
+  animation: fade-up 400ms var(--ease) both;
+}
+.welcome.gone { display:none; }
+@keyframes fade-up { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
+
+.w-logo { width:88px; height:88px; margin-bottom:28px; position:relative; }
+.w-logo svg { width:100%; height:100%; }
+
+/* HIGH CONTRAST welcome text */
+.w-title { font-family:var(--fd); font-size:40px; font-weight:800; text-transform:uppercase; color:var(--t1); letter-spacing:2px; margin-bottom:12px; line-height:1; }
+.w-title em { font-style:normal; color:var(--red-2); }
+.w-sub { font-size:13.5px; color:var(--t2); text-align:center; max-width:310px; line-height:1.7; margin-bottom:32px; }
+.w-note {
+  display:flex; align-items:center; gap:9px; padding:10px 18px;
+  background:rgba(255,255,255,0.04); border:1px solid var(--bd);
+  font-family:var(--fm); font-size:11px; color:var(--t2);
+}
+.w-ndot { width:5px; height:5px; background:var(--tg); box-shadow:0 0 6px var(--tg-gl); animation:dot-blink 2.2s ease-in-out infinite; }
+
+/* ── TERMINAL AREA ── */
+.term-area { flex:1; display:flex; flex-direction:column; padding:14px; overflow:hidden; }
+.term-area.gone { display:none; }
+
+.target-bar {
+  display:flex; align-items:center; gap:10px; padding:8px 14px; margin-bottom:14px;
+  background:rgba(255,255,255,0.04); border:1px solid var(--bd); flex-shrink:0;
+}
+.tb-live {
+  display:inline-flex; align-items:center; gap:6px; padding:3px 10px;
+  font-family:var(--fm); font-size:10px;
+  color:var(--tg); background:var(--tg-lo); border:1px solid var(--tg-bd);
+}
+.tb-ldot { width:5px; height:5px; background:var(--tg); animation:dot-blink 2.2s ease-in-out infinite; }
+/* HIGH CONTRAST target hostname */
+.tb-host { font-family:var(--fd); font-size:16px; font-weight:700; color:var(--t1); letter-spacing:0.5px; text-transform:uppercase; }
+.tb-meta { font-family:var(--fm); font-size:10.5px; color:var(--t3); }
+.tb-ping { margin-left:auto; display:flex; align-items:center; gap:6px; font-family:var(--fm); font-size:10.5px; color:var(--t2); }
+.tb-pdot { width:4px; height:4px; background:var(--tg); animation:dot-blink 2.2s ease-in-out infinite; }
+
+/* Terminal frame — HERO UNIT */
+.term-frame { flex:1; display:flex; flex-direction:column; position:relative; overflow:hidden; min-height:0; }
+
+/* Glowing border */
+.term-frame::before {
+  content:''; position:absolute; inset:-1px; z-index:0; pointer-events:none;
+  background:linear-gradient(135deg, var(--red-2) 0%, rgba(197,17,28,0.3) 35%, rgba(0,255,136,0.2) 70%, var(--tg) 100%);
+  border-radius:2px; animation:frame-glow 5s ease-in-out infinite;
+}
+@keyframes frame-glow { 0%,100%{opacity:0.45;}50%{opacity:1;} }
+.term-frame::after {
+  content:''; position:absolute; inset:-4px; z-index:-1; pointer-events:none;
+  box-shadow:0 0 50px rgba(197,17,28,0.18), 0 0 100px rgba(0,255,136,0.06);
+  animation:frame-glow 5s ease-in-out infinite;
+}
+
+.term-inner {
+  position:relative; z-index:1; flex:1; display:flex; flex-direction:column;
+  background:#020208; border:1px solid rgba(255,255,255,0.07); overflow:hidden;
+  box-shadow:inset 0 0 80px rgba(0,0,0,0.9), inset 0 0 1px rgba(255,255,255,0.04);
+}
+
+.term-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:9px 14px;
+  background:rgba(3,3,12,0.95); border-bottom:1px solid rgba(255,255,255,0.07);
+  flex-shrink:0;
+}
+.tdots { display:flex; gap:6px; }
+.td { width:11px; height:11px; border-radius:50%; }
+.td.r { background:#FF5F56; box-shadow:0 0 8px rgba(255,95,86,0.6); }
+.td.y { background:#FFBD2E; box-shadow:0 0 8px rgba(255,189,46,0.5); }
+.td.g { background:#27C93F; box-shadow:0 0 8px rgba(39,201,63,0.5); }
+
+/* HIGH CONTRAST terminal header text */
+.term-hdr-center { font-family:var(--fm); font-size:10px; font-weight:300; color:var(--t3); letter-spacing:2.5px; text-transform:uppercase; }
+.term-hdr-right { display:flex; align-items:center; gap:8px; font-family:var(--fm); font-size:10px; color:var(--t2); }
+.term-live-dot { width:6px; height:6px; background:var(--tg); box-shadow:0 0 8px var(--tg); animation:dot-blink 1.8s ease-in-out infinite; }
+
+/* Output */
+.terminal {
+  flex:1; overflow-y:auto; padding:14px 16px;
+  font-family:var(--fm); font-size:11.5px; line-height:1.88;
+  background-image:repeating-linear-gradient(transparent, transparent 32px, rgba(255,255,255,0.014) 32px, rgba(255,255,255,0.014) 33px);
+}
+
+.tl {
+  display:grid; grid-template-columns:52px 14px 1fr; column-gap:8px;
+  padding:0.5px 0; animation:tl-in 90ms var(--ease) both;
+}
+@keyframes tl-in { from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:translateX(0);} }
+.tl-ts  { font-size:9px; color:#1C1D32; font-style:italic; padding-top:3px; }
+.tl-px  { font-weight:500; padding-top:2px; }
+.tl-txt { white-space:pre-wrap; word-break:break-all; }
+
+.tl.cmd .tl-px  { color:var(--ta); }
+/* HIGH CONTRAST command text */
+.tl.cmd .tl-txt { color:#F0F3FF; font-weight:500; }
+.tl.out .tl-px  { color:#1C1D32; }
+/* HIGH CONTRAST output text — was too dark */
+.tl.out .tl-txt { color:#6A7599; }
+.tl.ok  .tl-px  { color:var(--tg); }
+.tl.ok  .tl-txt { color:var(--tg); }
+.tl.err .tl-px  { color:var(--tr); }
+.tl.err .tl-txt { color:var(--tr); }
+.tl.inf .tl-px  { color:var(--tb); }
+/* HIGH CONTRAST info text */
+.tl.inf .tl-txt { color:#8A9EC8; }
+.tl.klog .tl-px  { color:var(--tp); }
+.tl.klog .tl-txt { color:var(--tp); opacity:0.8; }
+.tl.div {
+  grid-column:1/-1; display:block;
+  color:#161728; font-size:9.5px;
+  border-top:1px solid #0E0F1C;
+  padding-top:8px; margin:5px 0 4px; letter-spacing:0.5px;
+}
+
+/* Input bar */
+.inp-bar {
+  display:flex; align-items:stretch;
+  background:rgba(3,3,12,0.96); border-top:1px solid rgba(255,255,255,0.08);
+  flex-shrink:0;
+}
+.inp-prompt {
+  display:flex; align-items:center; gap:6px; padding:11px 14px;
+  border-right:1px solid rgba(255,255,255,0.08); flex-shrink:0;
+}
+.inp-sym  { font-family:var(--fm); font-size:13px; color:var(--ta); user-select:none; }
+.inp-path { font-family:var(--fm); font-size:10.5px; color:var(--t3); user-select:none; }
+.inp-tld  { font-family:var(--fm); font-size:10.5px; color:var(--t4); user-select:none; }
+
+.cmd-field {
+  flex:1; background:transparent; border:none; outline:none;
+  padding:11px 14px; font-family:var(--fm); font-size:12px;
+  /* HIGH CONTRAST input text */
+  color:var(--t1); caret-color:var(--red-2);
+}
+.cmd-field::placeholder { color:var(--t4); }
+
+.run-btn {
+  margin:8px 10px; padding:8px 22px;
+  background:linear-gradient(160deg, var(--red-2), var(--red));
+  border:1px solid var(--red-3); color:#fff;
+  font-family:var(--fd); font-size:13px; font-weight:700;
+  letter-spacing:2.5px; text-transform:uppercase;
+  cursor:pointer; flex-shrink:0;
+  transition:all 180ms var(--spring);
+  box-shadow:0 4px 22px var(--red-glow), inset 0 1px 0 rgba(255,255,255,0.08);
+  position:relative; overflow:hidden;
+}
+.run-btn:hover { background:linear-gradient(160deg, var(--red-3), var(--red-2)); transform:translateY(-1px); box-shadow:0 8px 36px rgba(197,17,28,0.58), inset 0 1px 0 rgba(255,255,255,0.12); }
+.run-btn:active { transform:scale(0.97); box-shadow:none; }
+
+/* ══════════════════════════════════════════════
+   INSPECTOR
+══════════════════════════════════════════════ */
+.inspector {
+  grid-row:2; grid-column:3;
+  display:flex; flex-direction:column;
+  background:rgba(7,7,16,0.94); border-left:1px solid var(--bd);
+  backdrop-filter:blur(10px); overflow-y:auto; overflow-x:hidden;
+  animation: panel-r 480ms var(--spring) 280ms both;
+}
+@keyframes panel-r { from{opacity:0;transform:translateX(18px);}to{opacity:1;transform:translateX(0);} }
+
+.insp-sec { padding:14px 15px; border-bottom:1px solid var(--bd); }
+
+/* HIGH CONTRAST section heading */
+.insp-hd {
+  display:flex; align-items:center; gap:8px;
+  font-family:var(--fd); font-size:11px; font-weight:700;
+  color:var(--t2); letter-spacing:2.5px; text-transform:uppercase;
+  margin-bottom:10px;
+}
+.insp-hd::after { content:''; flex:1; height:1px; background:var(--bd); }
+
+.acts { display:flex; flex-direction:column; gap:2px; }
+
+.act {
+  display:flex; align-items:center; gap:9px; padding:7px 9px;
+  border:1px solid transparent;
+  /* HIGH CONTRAST action text */
+  color:var(--t2);
+  font-family:var(--fb); font-size:12px; font-weight:400;
+  cursor:pointer; background:transparent; text-align:left; width:100%;
+  transition:all 150ms var(--ease); position:relative; overflow:hidden;
+}
+.act::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.025), transparent);
+  transform:translateX(-120%); transition:transform 350ms;
+}
+.act:hover { background:rgba(255,255,255,0.055); border-color:var(--bd); color:var(--t1); padding-left:13px; }
+.act:hover::after { transform:translateX(120%); }
+.act:active { transform:scale(0.99); }
+.act.kill:hover { background:rgba(255,68,68,0.07); border-color:rgba(255,68,68,0.22); color:var(--tr); }
+
+.act-ic { width:22px; height:22px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:transform 200ms var(--spring); }
+.act:hover .act-ic { transform:scale(1.15); }
+.ic-r  { color:var(--red-2);  background:var(--red-lo); }
+.ic-g  { color:var(--tg);     background:var(--tg-lo); }
+.ic-b  { color:var(--tb);     background:rgba(61,168,255,0.10); }
+.ic-a  { color:var(--ta);     background:rgba(255,179,0,0.10); }
+.ic-p  { color:var(--tp);     background:rgba(192,132,252,0.10); }
+.ic-tr { color:var(--tr);     background:rgba(255,68,68,0.10); }
+.act-key { margin-left:auto; font-family:var(--fm); font-size:9px; color:var(--t3); background:var(--s3); padding:1px 6px; border:1px solid var(--bd); }
+
+/* Session info */
+.si-tbl { display:flex; flex-direction:column; }
+.si-row { display:flex; justify-content:space-between; align-items:center; padding:6.5px 0; border-bottom:1px solid var(--bd); }
+.si-row:last-child { border-bottom:none; }
+/* HIGH CONTRAST info keys */
+.si-k { font-family:var(--fd); font-size:10px; font-weight:700; color:var(--t2); letter-spacing:1.5px; text-transform:uppercase; }
+/* HIGH CONTRAST info values */
+.si-v { font-family:var(--fm); font-size:11px; color:var(--t2); max-width:135px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:right; }
+.si-v.red   { color:var(--red-2); }
+.si-v.green { color:var(--tg); }
+.si-v.dim   { color:var(--t3); }
+
+/* ══════════════════════════════════════════════
+   STATUS BAR
+══════════════════════════════════════════════ */
+.sbar {
+  grid-column:1/-1;
+  display:flex; align-items:center; padding:0 16px; gap:14px;
+  background:rgba(5,5,12,0.98); border-top:1px solid var(--bd);
+  font-family:var(--fm); font-size:10.5px; color:var(--t3);
+  position:relative; backdrop-filter:blur(8px);
+}
+.sbar::before {
+  content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, var(--red) 0%, var(--red-2) 28%, transparent 65%);
+  opacity:0.65;
+}
+.sb-i { display:flex; align-items:center; gap:5px; white-space:nowrap; }
+.sb-dot { width:5px; height:5px; background:var(--t4); transition:background 300ms; }
+.sb-dot.on { background:var(--tg); box-shadow:0 0 5px var(--tg-gl); }
+.sb-vr { width:1px; height:11px; background:var(--bd); flex-shrink:0; }
+.sb-r { margin-left:auto; color:var(--t3); font-size:10px; }
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════ */
+@media (max-width:1100px){ .app{grid-template-columns:245px 1fr 225px;} }
+@media (max-width:920px) { .app{grid-template-columns:235px 1fr;} .inspector{display:none;} }
+@media (max-width:700px) { .app{grid-template-columns:1fr;} .sessions,.hdr-stats{display:none;} }
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div class="vig"></div>
+<div class="halo-red"></div>
+<div class="halo-teal"></div>
+
+<div class="app">
+
+<!-- ════ HEADER ════ -->
+<header class="hdr">
+  <a class="brand" href="#">
+
+    <!-- ─── CUSTOM "AF" LOGO MARK ─── -->
+    <div class="af-logo">
+      <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Hexagonal frame -->
+        <path d="M21 2 L38 11.5 L38 30.5 L21 40 L4 30.5 L4 11.5 Z"
+              fill="#08081A" stroke="rgba(197,17,28,0.6)" stroke-width="1.2"/>
+        <!-- Inner hex glow fill -->
+        <path d="M21 6 L35 14 L35 28 L21 36 L7 28 L7 14 Z"
+              fill="url(#hex-fill)" opacity="0.08"/>
+
+        <!-- "A" letter - left side -->
+        <path d="M10 30 L16 13 L19 13 L25 30" stroke="#F5F7FF" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <!-- A crossbar -->
+        <line x1="12" y1="24" x2="23" y2="24" stroke="#F5F7FF" stroke-width="2"
+              stroke-linecap="round"/>
+
+        <!-- "F" letter - right side, crimson -->
+        <line x1="26" y1="13" x2="26" y2="30" stroke="#E0182A" stroke-width="2.2"
+              stroke-linecap="round"/>
+        <line x1="26" y1="13" x2="34" y2="13" stroke="#E0182A" stroke-width="2.2"
+              stroke-linecap="round"/>
+        <line x1="26" y1="21.5" x2="32" y2="21.5" stroke="#E0182A" stroke-width="2"
+              stroke-linecap="round"/>
+
+        <!-- Corner accent sparks -->
+        <circle cx="21" cy="2" r="1.8" fill="#E0182A">
+          <animate attributeName="opacity" values="1;0.2;1" dur="1.8s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="38" cy="11.5" r="1.3" fill="#F5F7FF" opacity="0.5">
+          <animate attributeName="opacity" values="0.5;0.1;0.5" dur="2.4s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="4" cy="30.5" r="1.3" fill="#E0182A" opacity="0.7">
+          <animate attributeName="opacity" values="0.7;0.15;0.7" dur="3s" repeatCount="indefinite"/>
+        </circle>
+
+        <!-- Rotating outer tick marks -->
+        <g opacity="0.25">
+          <animateTransform attributeName="transform" type="rotate" from="0 21 21" to="360 21 21" dur="20s" repeatCount="indefinite"/>
+          <line x1="21" y1="0" x2="21" y2="3" stroke="#E0182A" stroke-width="1"/>
+          <line x1="21" y1="39" x2="21" y2="42" stroke="#E0182A" stroke-width="1"/>
+          <line x1="0" y1="21" x2="3" y2="21" stroke="#F5F7FF" stroke-width="1"/>
+          <line x1="39" y1="21" x2="42" y2="21" stroke="#F5F7FF" stroke-width="1"/>
+        </g>
+
+        <defs>
+          <linearGradient id="hex-fill" x1="4" y1="4" x2="38" y2="38">
+            <stop offset="0%" stop-color="#E0182A"/>
+            <stop offset="100%" stop-color="#00FF88"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="brand-words">
+      <div class="brand-row">
+        <span class="b-simple">Simple</span><span class="b-af">AF</span>
+      </div>
+      <div class="brand-cap">Remote Administration</div>
+    </div>
+  </a>
+
+  <div class="hdr-stats">
+    <div class="stat">
+      <span class="st-lbl">CPU</span>
+      <div class="st-track"><div class="st-fill" id="cpu-fill" style="width:0%"></div></div>
+      <span class="st-num" id="cpu-val">--%</span>
+    </div>
+    <div class="stat">
+      <span class="st-lbl">RAM</span>
+      <div class="st-track"><div class="st-fill g" id="mem-fill" style="width:0%"></div></div>
+      <span class="st-num" id="mem-val">-- GB</span>
+    </div>
+    <div class="stat">
+      <span class="st-lbl">NET</span>
+      <span class="st-num" id="net-val">-- KB/s</span>
+    </div>
+  </div>
+
+  <div class="vr" style="margin-left:12px"></div>
+
+  <div class="live-pill" id="livePill">
+    <div class="pdot" id="pdot"></div>
+    <span id="pillLabel">Listening</span>
+  </div>
+
+  <div class="hdr-right">
+    <div class="vr"></div>
+    <div>
+      <div class="clock-t" id="hclock">--:--:--</div>
+      <div class="clock-d" id="hdate">---</div>
+    </div>
+  </div>
+</header>
+
+<!-- ════ SESSIONS ════ -->
+<aside class="sessions">
+  <div class="panel-top">
+    <span class="panel-lbl">Sessions</span>
+    <span class="sess-chip" id="sessCnt">0</span>
+  </div>
+  <div class="sess-scroll" id="sessList">
+    <div class="empty-v">
+      <div class="empty-ico">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.2">
+          <circle cx="13" cy="13" r="3"/>
+          <path d="M7 19A8.5 8.5 0 0 1 7 7" stroke-linecap="round"/>
+          <path d="M4.5 21.5A11.5 11.5 0 0 1 4.5 4.5" stroke-linecap="round" opacity="0.4"/>
+          <path d="M19 19A8.5 8.5 0 0 0 19 7" stroke-linecap="round"/>
+          <path d="M21.5 21.5A11.5 11.5 0 0 0 21.5 4.5" stroke-linecap="round" opacity="0.4"/>
+        </svg>
+      </div>
+      <p class="empty-h">No Sessions</p>
+      <p class="empty-p">Agents connect automatically<br>on port 8080</p>
+    </div>
+  </div>
+</aside>
+
+<!-- ════ WORKSPACE ════ -->
+<main class="workspace">
+  <div class="toolbar">
+    <div class="tg">
+      <button class="btn red rip" onclick="qcmd('screenshot')">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="2.5" width="11" height="8.5" rx="1"/>
+          <circle cx="6.5" cy="7" r="2"/>
+          <path d="M4.5 2.5L5.3 1h2.9L9 2.5"/>
+          <circle cx="10.5" cy="4.2" r="0.7" fill="currentColor" stroke="none"/>
+        </svg>
+        Screenshot
+      </button>
+    </div>
+    <div class="tg">
+      <button class="btn rip" onclick="qcmd('keylog_start')">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+          <rect x="1" y="3.5" width="11" height="7" rx="1"/>
+          <line x1="3" y1="7" x2="3" y2="7" stroke-width="1.8"/>
+          <line x1="5.5" y1="7" x2="5.5" y2="7" stroke-width="1.8"/>
+          <line x1="8" y1="7" x2="8" y2="7" stroke-width="1.8"/>
+          <line x1="10.5" y1="7" x2="10.5" y2="7" stroke-width="1.8"/>
+          <path d="M4.5 9h4" stroke-width="1.1"/>
+        </svg>
+        Keylog
+      </button>
+      <button class="btn rip" onclick="qcmd('keylog_stop')">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3.5 3.5h3.5l2.5 2.5v3.5h-6z"/>
+        </svg>
+        Stop
+      </button>
+    </div>
+    <div class="tg">
+      <button class="btn rip" onclick="qcmd('shell')">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="2,4.5 5.5,6.5 2,8.5"/>
+          <line x1="7" y1="8.5" x2="11" y2="8.5"/>
+        </svg>
+        Shell
+      </button>
+    </div>
+    <div class="tg">
+      <button class="btn dng rip" onclick="clearTerm()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="2" y1="4" x2="11" y2="4"/>
+          <path d="M4.5 4V2.5h4V4"/>
+          <path d="M3 4l.7 7.5h5.6L10 4"/>
+          <line x1="5.2" y1="6.5" x2="5.2" y2="9.5"/>
+          <line x1="7.8" y1="6.5" x2="7.8" y2="9.5"/>
+        </svg>
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <!-- Welcome -->
+  <div class="welcome" id="welcomeView">
+    <div class="w-logo">
+      <svg viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Outer spin ring -->
+        <circle cx="44" cy="44" r="41" stroke="rgba(197,17,28,0.22)" stroke-width="1" stroke-dasharray="7 5" stroke-linecap="round">
+          <animateTransform attributeName="transform" type="rotate" from="0 44 44" to="360 44 44" dur="18s" repeatCount="indefinite"/>
+        </circle>
+        <!-- Mid counter ring -->
+        <circle cx="44" cy="44" r="34" stroke="rgba(0,255,136,0.14)" stroke-width="1" stroke-dasharray="4 6">
+          <animateTransform attributeName="transform" type="rotate" from="360 44 44" to="0 44 44" dur="12s" repeatCount="indefinite"/>
+        </circle>
+        <!-- Hex body -->
+        <path d="M44 10L74 27L74 61L44 78L14 61L14 27Z" fill="#06060F"/>
+        <path d="M44 10L74 27L74 61L44 78L14 61L14 27Z" stroke="rgba(197,17,28,0.55)" stroke-width="1.5"/>
+
+        <!-- "A" — white -->
+        <path d="M22 64 L34 24 L38 24 L50 64" stroke="#F5F7FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <line x1="26" y1="52" x2="46" y2="52" stroke="#F5F7FF" stroke-width="2.5" stroke-linecap="round"/>
+
+        <!-- "F" — crimson -->
+        <line x1="53" y1="24" x2="53" y2="64" stroke="#E0182A" stroke-width="3" stroke-linecap="round"/>
+        <line x1="53" y1="24" x2="68" y2="24" stroke="#E0182A" stroke-width="3" stroke-linecap="round"/>
+        <line x1="53" y1="43" x2="64" y2="43" stroke="#E0182A" stroke-width="2.5" stroke-linecap="round"/>
+
+        <!-- Pulse from center -->
+        <circle cx="44" cy="44" r="8" stroke="rgba(197,17,28,0.6)" stroke-width="1" fill="none">
+          <animate attributeName="r" values="6;22;6" dur="3s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.6;0;0.6" dur="3s" repeatCount="indefinite"/>
+        </circle>
+
+        <!-- Corner accent dots -->
+        <circle cx="44" cy="10" r="2.5" fill="#E0182A">
+          <animate attributeName="opacity" values="1;0.2;1" dur="1.8s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="74" cy="27" r="1.8" fill="#F5F7FF" opacity="0.6">
+          <animate attributeName="opacity" values="0.6;0.1;0.6" dur="2.6s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="14" cy="61" r="1.8" fill="#E0182A" opacity="0.7">
+          <animate attributeName="opacity" values="0.7;0.1;0.7" dur="3.2s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+    </div>
+    <div class="w-title">Console <em>Ready</em></div>
+    <p class="w-sub">Select an active session from the sidebar to establish a remote connection and begin administration</p>
+    <div class="w-note">
+      <div class="w-ndot"></div>
+      agent listener active · port 8080
+    </div>
+  </div>
+
+  <!-- Terminal -->
+  <div class="term-area gone" id="termArea">
+    <div class="target-bar">
+      <div class="tb-live"><div class="tb-ldot"></div> connected</div>
+      <span class="tb-host" id="tbHost">—</span>
+      <span class="tb-meta" id="tbMeta"></span>
+      <div class="tb-ping"><div class="tb-pdot"></div><span id="latVal">—</span></div>
+    </div>
+    <div class="term-frame">
+      <div class="term-inner">
+        <div class="term-hdr">
+          <div class="tdots">
+            <div class="td r"></div><div class="td y"></div><div class="td g"></div>
+          </div>
+          <div class="term-hdr-center">remote execution shell</div>
+          <div class="term-hdr-right">
+            <div class="term-live-dot" id="tLiveDot"></div>
+            <span id="tStatus">IDLE</span>
+          </div>
+        </div>
+        <div class="terminal" id="termOut"></div>
+        <div class="inp-bar">
+          <div class="inp-prompt">
+            <span class="inp-sym">❯</span>
+            <span class="inp-path" id="inpPath">saf</span>
+            <span class="inp-tld">&nbsp;~</span>
+          </div>
+          <input class="cmd-field rip" id="cmdField" type="text"
+                 placeholder="enter command and press Enter…"
+                 autocomplete="off" spellcheck="false">
+          <button class="run-btn rip" onclick="execFromField()">Execute</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ════ INSPECTOR ════ -->
+<aside class="inspector">
+  <div class="insp-sec">
+    <div class="insp-hd">Quick Actions</div>
+    <div class="acts">
+      <button class="act rip" onclick="qcmd('screenshot')">
+        <span class="act-ic ic-r"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="11" height="9" rx="1"/><circle cx="6.5" cy="6.5" r="2"/><path d="M4.5 2L5.3.8h2.9L9 2"/></svg></span>
+        Capture Screen <span class="act-key">F5</span>
+      </button>
+      <button class="act rip" onclick="sysExec('whoami')">
+        <span class="act-ic ic-b"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="6.5" cy="4.5" r="2.2"/><path d="M1.5 12c0-2.8 2.2-5 5-5s5 2.2 5 5"/></svg></span>
+        Identify User
+      </button>
+      <button class="act rip" onclick="sysExec('ipconfig /all')">
+        <span class="act-ic ic-b"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="5"/><ellipse cx="6.5" cy="6.5" rx="2.2" ry="5"/><line x1="1.5" y1="6.5" x2="11.5" y2="6.5"/></svg></span>
+        Network Config
+      </button>
+      <button class="act rip" onclick="sysExec('net user')">
+        <span class="act-ic ic-g"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="4.5" cy="4" r="1.8"/><path d="M1 11c0-2 1.6-3.5 3.5-3.5s3.5 1.5 3.5 3.5"/><circle cx="10" cy="4.5" r="1.3"/><path d="M10 8c1.5 0 2.8.9 2.8 2.8"/></svg></span>
+        List Users
+      </button>
+      <button class="act rip" onclick="sysExec('tasklist')">
+        <span class="act-ic ic-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="1.5" y="2" width="10" height="9" rx="1"/><line x1="3.5" y1="5" x2="9.5" y2="5"/><line x1="3.5" y1="7" x2="9.5" y2="7"/><line x1="3.5" y1="3.5" x2="5.5" y2="3.5"/></svg></span>
+        Running Processes
+      </button>
+      <button class="act rip" onclick="sysExec('netstat -ano')">
+        <span class="act-ic ic-a"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="2" cy="5" r="0.9"/><circle cx="11" cy="5" r="0.9"/><circle cx="6.5" cy="11" r="0.9"/><line x1="2.9" y1="5.5" x2="5.6" y2="6.2"/><line x1="10.1" y1="5.5" x2="7.4" y2="6.2"/><line x1="6.5" y1="10.1" x2="6.5" y2="7.9"/></svg></span>
+        Active Connections
+      </button>
+      <button class="act rip" onclick="sysExec('systeminfo')">
+        <span class="act-ic ic-p"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="1.5" y="2" width="10" height="7" rx="1"/><line x1="4" y1="11" x2="9" y2="11"/><line x1="6.5" y1="9" x2="6.5" y2="11"/><line x1="4.5" y1="5.5" x2="4.5" y2="5.5" stroke-width="1.8"/><line x1="6.5" y1="4.5" x2="6.5" y2="7"/></svg></span>
+        System Info
+      </button>
+      <button class="act kill rip" onclick="sysExec('shutdown /s /t 0')">
+        <span class="act-ic ic-tr"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 4A4.5 4.5 0 1 0 9 4"/><line x1="6.5" y1="2" x2="6.5" y2="6"/></svg></span>
+        Shutdown Target
+      </button>
+    </div>
+  </div>
+
+  <div class="insp-sec">
+    <div class="insp-hd">Session</div>
+    <div class="si-tbl">
+      <div class="si-row"><span class="si-k">Status</span><span class="si-v dim" id="si-status">Offline</span></div>
+      <div class="si-row"><span class="si-k">Target</span><span class="si-v red" id="si-target">—</span></div>
+      <div class="si-row"><span class="si-k">Hostname</span><span class="si-v" id="si-host">—</span></div>
+      <div class="si-row"><span class="si-k">User</span><span class="si-v" id="si-user">—</span></div>
+      <div class="si-row"><span class="si-k">IP</span><span class="si-v" id="si-ip">—</span></div>
+      <div class="si-row"><span class="si-k">Connected</span><span class="si-v" id="si-conn">—</span></div>
+      <div class="si-row"><span class="si-k">Commands</span><span class="si-v green" id="si-cmds">0</span></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ════ STATUSBAR ════ -->
+<footer class="sbar">
+  <div class="sb-i"><div class="sb-dot" id="sb-dot"></div><span id="sb-conn">disconnected</span></div>
+  <div class="sb-vr"></div>
+  <div class="sb-i">sessions:&nbsp;<span id="sb-sess" style="color:var(--red-2)">0</span></div>
+  <div class="sb-vr"></div>
+  <div class="sb-i">target:&nbsp;<span id="sb-tgt" style="color:var(--t2)">none</span></div>
+  <div class="sb-r">simpleaf v2.0 · remote admin console</div>
+</footer>
+</div>
+
+<script>
+/* ══════════════════════════════════════
+   RICH BACKGROUND — hex grid + particles + data streams
+══════════════════════════════════════ */
+(function(){
+  const cv = document.getElementById('bgCanvas');
+  const cx = cv.getContext('2d');
+  let W, H;
+
+  function resize(){
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', ()=>{ resize(); init(); });
+
+  /* ── HEX GRID ── */
+  const HEX_SIZE = 48;
+  const hexes = [];
+
+  function hexCorner(cx, cy, i){
+    const ang = Math.PI/180 * (60*i - 30);
+    return [cx + HEX_SIZE * Math.cos(ang), cy + HEX_SIZE * Math.sin(ang)];
+  }
+
+  function buildHexGrid(){
+    hexes.length = 0;
+    const w = HEX_SIZE * Math.sqrt(3);
+    const h = HEX_SIZE * 2;
+    for(let row = -1; row < H/h*1.5 + 2; row++){
+      for(let col = -1; col < W/w + 2; col++){
+        const x = col * w + (row % 2 === 0 ? 0 : w/2);
+        const y = row * h * 0.75;
+        hexes.push({
+          x, y,
+          alpha: Math.random() * 0.5,
+          pulse: Math.random() * Math.PI * 2,
+          speed: 0.003 + Math.random() * 0.008,
+          red: Math.random() < 0.08
+        });
+      }
+    }
+  }
+  buildHexGrid();
+
+  /* ── PARTICLES ── */
+  const PCNT = 90;
+  const particles = [];
+
+  function initParticles(){
+    particles.length = 0;
+    for(let i=0;i<PCNT;i++){
+      const type = Math.random() < 0.25 ? 'red' : Math.random() < 0.15 ? 'green' : 'white';
+      particles.push({
+        x: Math.random()*W, y: Math.random()*H,
+        vx: (Math.random()-0.5)*0.4,
+        vy: (Math.random()-0.5)*0.4,
+        r: 0.8 + Math.random()*2.0,
+        type,
+        alpha: 0.4 + Math.random()*0.6,
+        twinkle: Math.random()*Math.PI*2,
+        tspeed: 0.02 + Math.random()*0.04
+      });
+    }
+  }
+  initParticles();
+
+  /* ── DATA STREAMS (falling vertical lines) ── */
+  const STREAMS = 18;
+  const streams = [];
+
+  function initStreams(){
+    streams.length = 0;
+    for(let i=0;i<STREAMS;i++){
+      streams.push({
+        x: Math.random()*W,
+        y: Math.random()*H - H,
+        speed: 0.4 + Math.random()*0.8,
+        len: 40 + Math.random()*120,
+        alpha: 0.06 + Math.random()*0.12,
+        chars: Array.from({length:20}, ()=> String.fromCharCode(0x30+Math.random()*75|0)),
+        tick: 0
+      });
+    }
+  }
+  initStreams();
+
+  function init(){ buildHexGrid(); initParticles(); initStreams(); }
+
+  /* ── DRAW LOOP ── */
+  let t = 0;
+  function draw(){
+    cx.clearRect(0,0,W,H);
+    t += 0.012;
+
+    /* 1. Hex grid */
+    for(const h of hexes){
+      h.pulse += h.speed;
+      const base = 0.025 + Math.sin(h.pulse)*0.015;
+      const a = base + (h.red ? 0.04 : 0);
+      cx.strokeStyle = h.red
+        ? `rgba(197,17,28,${a*2.5})`
+        : `rgba(255,255,255,${a})`;
+      cx.lineWidth = 0.6;
+      cx.beginPath();
+      for(let i=0;i<6;i++){
+        const [px,py] = hexCorner(h.x,h.y,i);
+        i===0 ? cx.moveTo(px,py) : cx.lineTo(px,py);
+      }
+      cx.closePath();
+      cx.stroke();
+
+      /* Occasional hex fill flash */
+      if(h.red && Math.sin(h.pulse*1.5)>0.92){
+        cx.fillStyle = `rgba(197,17,28,${Math.sin(h.pulse*1.5)*0.04})`;
+        cx.fill();
+      }
+    }
+
+    /* 2. Data stream columns */
+    for(const s of streams){
+      s.tick++;
+      if(s.tick % 8 === 0) s.chars[Math.floor(Math.random()*s.chars.length)] = String.fromCharCode(0x30+Math.random()*75|0);
+      for(let i=0;i<s.chars.length;i++){
+        const y = s.y + i*14;
+        if(y<0||y>H) continue;
+        const fade = 1 - i/s.chars.length;
+        const isHead = i===0;
+        cx.fillStyle = isHead
+          ? `rgba(0,255,136,${s.alpha*fade*3})`
+          : `rgba(0,255,136,${s.alpha*fade*0.7})`;
+        cx.font = '10px JetBrains Mono, monospace';
+        cx.fillText(s.chars[i], s.x, y);
+      }
+      s.y += s.speed;
+      if(s.y > H) { s.y = -s.len; s.x = Math.random()*W; }
+    }
+
+    /* 3. Particle nodes + connections */
+    const MAX_DIST = 140;
+    for(let i=0;i<particles.length;i++){
+      const p = particles[i];
+      /* Connections */
+      for(let j=i+1;j<particles.length;j++){
+        const q = particles[j];
+        const dx=p.x-q.x, dy=p.y-q.y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<MAX_DIST){
+          const fade = (1-dist/MAX_DIST)*0.18;
+          const col = (p.type==='red'||q.type==='red')
+            ? `rgba(197,17,28,${fade})`
+            : (p.type==='green'||q.type==='green')
+              ? `rgba(0,255,136,${fade*0.6})`
+              : `rgba(200,207,232,${fade*0.5})`;
+          cx.strokeStyle = col;
+          cx.lineWidth = 0.8;
+          cx.beginPath(); cx.moveTo(p.x,p.y); cx.lineTo(q.x,q.y); cx.stroke();
+        }
+      }
+
+      /* Twinkle */
+      p.twinkle += p.tspeed;
+      const ta = p.alpha * (0.6 + 0.4*Math.sin(p.twinkle));
+
+      /* Glow halo */
+      const col = p.type==='red' ? [197,17,28] : p.type==='green' ? [0,255,136] : [200,207,232];
+      const g = cx.createRadialGradient(p.x,p.y,0, p.x,p.y,p.r*5);
+      g.addColorStop(0, `rgba(${col},${ta*0.6})`);
+      g.addColorStop(1, `rgba(${col},0)`);
+      cx.fillStyle = g;
+      cx.beginPath(); cx.arc(p.x,p.y,p.r*5,0,Math.PI*2); cx.fill();
+
+      /* Core */
+      cx.fillStyle = `rgba(${col},${ta})`;
+      cx.beginPath(); cx.arc(p.x,p.y,p.r,0,Math.PI*2); cx.fill();
+
+      /* Move */
+      p.x += p.vx; p.y += p.vy;
+      if(p.x<-20)p.x=W+20; if(p.x>W+20)p.x=-20;
+      if(p.y<-20)p.y=H+20; if(p.y>H+20)p.y=-20;
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ══════════════════════════════════════
+   APP LOGIC
+══════════════════════════════════════ */
+let target=null, pollT=null, klogT=null, cmds=0, store={};
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const SYM={cmd:'❯',out:'·',ok:'✓',err:'✗',inf:'ℹ',klog:'⌨'};
+
+/* Ripple */
+document.addEventListener('click',e=>{
+  const h=e.target.closest('.rip'); if(!h) return;
+  const w=document.createElement('span'),rc=h.getBoundingClientRect(),sz=Math.max(rc.width,rc.height)*3;
+  w.className='rip-w';
+  w.style.cssText=`width:${sz}px;height:${sz}px;left:${e.clientX-rc.left-sz/2}px;top:${e.clientY-rc.top-sz/2}px`;
+  w.style.background=(h.classList.contains('red')||h.classList.contains('run-btn'))
+    ?'rgba(255,255,255,0.22)':h.classList.contains('dng')||h.classList.contains('kill')
+    ?'rgba(255,68,68,0.14)':'rgba(255,255,255,0.06)';
+  h.appendChild(w); setTimeout(()=>w.remove(),700);
+});
+
+function ts(){const n=new Date();return[n.getHours(),n.getMinutes(),n.getSeconds()].map(v=>String(v).padStart(2,'0')).join(':');}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function tick(){
+  const n=new Date();
+  document.getElementById('hclock').textContent=ts();
+  document.getElementById('hdate').textContent=`${DAYS[n.getDay()]} ${MON[n.getMonth()]} ${n.getDate()} ${n.getFullYear()}`;
+}
+
+function tickStats(){
+  const cpu=12+Math.random()*65;
+  document.getElementById('cpu-val').textContent=`${cpu.toFixed(1)}%`;
+  document.getElementById('cpu-fill').style.width=`${cpu}%`;
+  const ram=3.2+Math.random()*10;
+  document.getElementById('mem-val').textContent=`${ram.toFixed(1)} GB`;
+  document.getElementById('mem-fill').style.width=`${(ram/16)*100}%`;
+  document.getElementById('net-val').textContent=`${Math.floor(35+Math.random()*420)} KB/s`;
+  if(target) document.getElementById('latVal').textContent=`${Math.floor(4+Math.random()*34)}ms`;
+}
+
+function addLine(text,type='out'){
+  const out=document.getElementById('termOut');
+  const d=document.createElement('div');
+  if(type==='div'){d.className='tl div';d.textContent=text;}
+  else{d.className=`tl ${type}`;d.innerHTML=`<span class="tl-ts">${ts()}</span><span class="tl-px">${SYM[type]||'·'}</span><span class="tl-txt">${esc(text)}</span>`;}
+  out.appendChild(d);out.scrollTop=out.scrollHeight;
+}
+function clearTerm(){document.getElementById('termOut').innerHTML='';addLine('Terminal cleared.','ok');}
+
+function goOnline(key,data){
+  target=key;
+  document.getElementById('welcomeView').classList.add('gone');
+  document.getElementById('termArea').classList.remove('gone');
+  document.getElementById('tbHost').textContent=data?.hostname||key;
+  document.getElementById('tbMeta').textContent=[data?.username,data?.ip?'· '+data.ip:''].filter(Boolean).join('  ');
+  document.getElementById('inpPath').textContent=key;
+  document.getElementById('tStatus').textContent='LIVE';
+  document.getElementById('livePill').classList.add('on');
+  document.getElementById('pdot').classList.add('on');
+  document.getElementById('pillLabel').textContent='Connected';
+  document.getElementById('sb-dot').classList.add('on');
+  document.getElementById('sb-conn').textContent='connected';
+  document.getElementById('sb-tgt').textContent=key;
+  document.getElementById('si-status').textContent='Online';
+  document.getElementById('si-status').className='si-v green';
+  document.getElementById('si-target').textContent=key;
+  document.getElementById('si-host').textContent=data?.hostname||'—';
+  document.getElementById('si-user').textContent=data?.username||'—';
+  document.getElementById('si-ip').textContent=data?.ip||'—';
+  document.getElementById('si-conn').textContent=ts();
+}
+function goOffline(){
+  document.getElementById('welcomeView').classList.remove('gone');
+  document.getElementById('termArea').classList.add('gone');
+  document.getElementById('livePill').classList.remove('on');
+  document.getElementById('pdot').classList.remove('on');
+  document.getElementById('pillLabel').textContent='Listening';
+  document.getElementById('sb-dot').classList.remove('on');
+  document.getElementById('sb-conn').textContent='disconnected';
+  document.getElementById('sb-tgt').textContent='none';
+  document.getElementById('si-status').textContent='Offline';
+  document.getElementById('si-status').className='si-v dim';
+  document.getElementById('si-conn').textContent='—';
+}
+
+async function loadSessions(){
+  try{
+    const r=await fetch('/clients'),clients=await r.json();
+    document.getElementById('sessCnt').textContent=clients.length;
+    document.getElementById('sb-sess').textContent=clients.length;
+    const list=document.getElementById('sessList');
+    if(!clients.length){
+      list.innerHTML=`<div class="empty-v"><div class="empty-ico"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="13" cy="13" r="3"/><path d="M7 19A8.5 8.5 0 0 1 7 7" stroke-linecap="round"/><path d="M4.5 21.5A11.5 11.5 0 0 1 4.5 4.5" stroke-linecap="round" opacity="0.4"/><path d="M19 19A8.5 8.5 0 0 0 19 7" stroke-linecap="round"/><path d="M21.5 21.5A11.5 11.5 0 0 0 21.5 4.5" stroke-linecap="round" opacity="0.4"/></svg></div><p class="empty-h">No Sessions</p><p class="empty-p">Agents connect automatically on port 8080</p></div>`;
+      return;
+    }
+    list.innerHTML=clients.map((c,i)=>{
+      const ini=(c.hostname||'??').substring(0,2).toUpperCase();
+      return `<div class="sc ${target===c.key?'active':''} rip" style="animation-delay:${i*55}ms" onclick="selectSess('${esc(c.key)}',${JSON.stringify(c).replace(/"/g,'&quot;')})"><div class="sc-shim"></div><div class="sc-row"><div class="sc-av">${ini}</div><div class="sc-info"><div class="sc-host">${esc(c.hostname||c.key)}</div><div class="sc-ip">${esc(c.ip||'—')}</div></div><div class="sc-live"></div></div><div class="sc-foot"><span class="sc-tag on">● live</span><span class="sc-usr">${esc(c.username||'—')}</span></div></div>`;
+    }).join('');
+    clients.forEach(c=>store[c.key]=c);
+  }catch(_){}
+}
+
+function selectSess(key,data){
+  if(pollT)clearInterval(pollT);if(klogT)clearInterval(klogT);
+  goOnline(key,data||store[key]);
+  const d=data||store[key];
+  addLine('──────────────────────────────────────────────────','div');
+  addLine(`Session established  →  ${key}`,'ok');
+  if(d) addLine(`${d.hostname||'?'}  ·  ${d.username||'?'}  ·  ${d.ip||'?'}`,'inf');
+  addLine('Remote shell active. Type any command below.','inf');
+  pollT=setInterval(pollResults,1000);klogT=setInterval(pollKeylog,3200);
+  cmds=0;document.getElementById('si-cmds').textContent='0';
+  loadSessions();document.getElementById('cmdField').focus();
+}
+
+async function pollResults(){if(!target)return;try{const r=await fetch(`/results/${target}`);const d=await r.json();if(d.results?.length)d.results.forEach(res=>{if(res.startsWith('SCREENSHOT:'))addLine(`Screenshot saved  →  ${res.replace('SCREENSHOT:','')}`, 'ok');else addLine(res,'out');});}catch(_){}}
+async function pollKeylog(){if(!target)return;try{const r=await fetch(`/keylog/${target}`);const d=await r.json();if(d.log?.length)addLine(`[keylog]  ${d.log}`,'klog');}catch(_){}}
+
+async function qcmd(a){if(!target){addLine('No session selected.','err');return;}await dispatch(a,null);}
+async function sysExec(c){if(!target){addLine('No session selected.','err');return;}await dispatch('cmd',c);}
+async function dispatch(action,params){
+  addLine(`${action}${params?'  '+params:''}`, 'cmd');
+  cmds++;document.getElementById('si-cmds').textContent=cmds;
+  try{await fetch(`/send/${target}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,params})});}
+  catch(e){addLine(`Delivery error: ${e.message}`,'err');}
+}
+function execFromField(){const f=document.getElementById('cmdField'),v=f.value.trim();if(!v)return;sysExec(v);f.value='';}
+document.getElementById('cmdField').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();execFromField();}});
+
+const BOOT=[
+  ['SIMPLEAF  ·  Remote Administration Console  ·  v2.0','ok',0],
+  ['──────────────────────────────────────────────────','div',80],
+  ['agent listener     →  port 8080','inf',300],
+  ['crypto module      →  initialized','inf',520],
+  ['shell engine       →  ready','inf',740],
+  ['keylogger module   →  standby','inf',960],
+  ['screenshot engine  →  ready','inf',1180],
+  ['──────────────────────────────────────────────────','div',1400],
+  ['all systems nominal. awaiting session selection.','ok',1620],
+];
+BOOT.forEach(([t,ty,d])=>setTimeout(()=>addLine(t,ty),d));
+
+setInterval(tick,1000);setInterval(tickStats,2400);setInterval(loadSessions,3000);
+tick();tickStats();setTimeout(loadSessions,1200);
+</script>
+</body>
+</html>
