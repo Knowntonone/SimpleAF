@@ -3,7 +3,7 @@
 Minimal Rust implant with a Node.js operator console, built for security research in authorized lab environments. HTTP command-and-control with per-session random tokens; the operator UI is a single-page terminal.
 
 ![Remote shell](assets/remote_shell.png)
-*Live session — `tasklist` output from the implant.*
+*Live session - `tasklist` output from the implant.*
 
 ## Features
 
@@ -20,7 +20,7 @@ Minimal Rust implant with a Node.js operator console, built for security researc
 | Component | Notes |
 |-----------|-------|
 | Windows 10 / 11 | implant target |
-| Rust 1.75+ | `rustup` — MSVC or MinGW toolchain, for the implant |
+| Rust 1.75+ | `rustup` - MSVC or MinGW toolchain, for the implant |
 | Node.js 18+ | with npm, for the operator console |
 
 ## Build

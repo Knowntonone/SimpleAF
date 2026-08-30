@@ -64,7 +64,8 @@ app.post('/screenshot/:key', (req, res) => {
     const { image } = req.body;
     
     const timestamp = Date.now();
-    const filename = `screenshot_${key}_${timestamp}.png`;
+    const safeKey = String(key).replace(/[^A-Za-z0-9_-]/g, "");
+    const filename = `screenshot_${safeKey}_${timestamp}.png`;
     const filepath = path.join(__dirname, 'public', 'screenshots', filename);
     
     if (!fs.existsSync(path.join(__dirname, 'public', 'screenshots'))) {

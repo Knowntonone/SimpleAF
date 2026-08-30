@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SimpleAF — Remote Administration Console</title>
+<title>SimpleAF - Remote Administration Console</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>
@@ -31,10 +31,10 @@
   --red-glow:rgba(197,17,28,0.40);
   --red-edge:rgba(197,17,28,0.55);
 
-  /* HIGH CONTRAST TEXT — key fix */
-  --t1: #F5F7FF;      /* primary text — near white */
-  --t2: #C8CFE8;      /* secondary — properly visible */
-  --t3: #8A94B8;      /* tertiary — visible muted */
+  /* HIGH CONTRAST TEXT - key fix */
+  --t1: #F5F7FF;      /* primary text - near white */
+  --t2: #C8CFE8;      /* secondary - properly visible */
+  --t3: #8A94B8;      /* tertiary - visible muted */
   --t4: #4E5878;      /* disabled/placeholder */
 
   /* Terminal accents */
@@ -87,7 +87,7 @@ html, body {
   background: radial-gradient(ellipse 75% 75% at 50% 50%, transparent 35%, rgba(4,4,12,0.82) 100%);
 }
 
-/* Ambient crimson halo — bottom left */
+/* Ambient crimson halo - bottom left */
 .halo-red {
   position: fixed; bottom: -100px; left: -60px; z-index: 1; pointer-events: none;
   width: 600px; height: 360px;
@@ -95,7 +95,7 @@ html, body {
   filter: blur(48px);
   animation: halo 7s ease-in-out infinite;
 }
-/* Teal halo — terminal zone */
+/* Teal halo - terminal zone */
 .halo-teal {
   position: fixed; top: 80px; right: 260px; z-index: 1; pointer-events: none;
   width: 500px; height: 320px;
@@ -149,7 +149,7 @@ html, body {
   text-decoration: none; user-select: none; flex-shrink: 0;
 }
 
-/* AF Logo mark — the actual icon with "AF" inside */
+/* AF Logo mark - the actual icon with "AF" inside */
 .af-logo {
   width: 42px; height: 42px; flex-shrink: 0; position: relative;
 }
@@ -411,10 +411,9 @@ html, body {
 /* HIGH CONTRAST target hostname */
 .tb-host { font-family:var(--fd); font-size:16px; font-weight:700; color:var(--t1); letter-spacing:0.5px; text-transform:uppercase; }
 .tb-meta { font-family:var(--fm); font-size:10.5px; color:var(--t3); }
-.tb-ping { margin-left:auto; display:flex; align-items:center; gap:6px; font-family:var(--fm); font-size:10.5px; color:var(--t2); }
 .tb-pdot { width:4px; height:4px; background:var(--tg); animation:dot-blink 2.2s ease-in-out infinite; }
 
-/* Terminal frame — HERO UNIT */
+/* Terminal frame - HERO UNIT */
 .term-frame { flex:1; display:flex; flex-direction:column; position:relative; overflow:hidden; min-height:0; }
 
 /* Glowing border */
@@ -473,7 +472,7 @@ html, body {
 /* HIGH CONTRAST command text */
 .tl.cmd .tl-txt { color:#F0F3FF; font-weight:500; }
 .tl.out .tl-px  { color:#1C1D32; }
-/* HIGH CONTRAST output text — was too dark */
+/* HIGH CONTRAST output text - was too dark */
 .tl.out .tl-txt { color:#6A7599; }
 .tl.ok  .tl-px  { color:var(--tg); }
 .tl.ok  .tl-txt { color:var(--tg); }
@@ -697,22 +696,6 @@ html, body {
     </div>
   </a>
 
-  <div class="hdr-stats">
-    <div class="stat">
-      <span class="st-lbl">CPU</span>
-      <div class="st-track"><div class="st-fill" id="cpu-fill" style="width:0%"></div></div>
-      <span class="st-num" id="cpu-val">--%</span>
-    </div>
-    <div class="stat">
-      <span class="st-lbl">RAM</span>
-      <div class="st-track"><div class="st-fill g" id="mem-fill" style="width:0%"></div></div>
-      <span class="st-num" id="mem-val">-- GB</span>
-    </div>
-    <div class="stat">
-      <span class="st-lbl">NET</span>
-      <span class="st-num" id="net-val">-- KB/s</span>
-    </div>
-  </div>
 
   <div class="vr" style="margin-left:12px"></div>
 
@@ -825,11 +808,11 @@ html, body {
         <path d="M44 10L74 27L74 61L44 78L14 61L14 27Z" fill="#06060F"/>
         <path d="M44 10L74 27L74 61L44 78L14 61L14 27Z" stroke="rgba(197,17,28,0.55)" stroke-width="1.5"/>
 
-        <!-- "A" — white -->
+        <!-- "A" - white -->
         <path d="M22 64 L34 24 L38 24 L50 64" stroke="#F5F7FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         <line x1="26" y1="52" x2="46" y2="52" stroke="#F5F7FF" stroke-width="2.5" stroke-linecap="round"/>
 
-        <!-- "F" — crimson -->
+        <!-- "F" - crimson -->
         <line x1="53" y1="24" x2="53" y2="64" stroke="#E0182A" stroke-width="3" stroke-linecap="round"/>
         <line x1="53" y1="24" x2="68" y2="24" stroke="#E0182A" stroke-width="3" stroke-linecap="round"/>
         <line x1="53" y1="43" x2="64" y2="43" stroke="#E0182A" stroke-width="2.5" stroke-linecap="round"/>
@@ -864,9 +847,9 @@ html, body {
   <div class="term-area gone" id="termArea">
     <div class="target-bar">
       <div class="tb-live"><div class="tb-ldot"></div> connected</div>
-      <span class="tb-host" id="tbHost">—</span>
+      <span class="tb-host" id="tbHost">-</span>
       <span class="tb-meta" id="tbMeta"></span>
-      <div class="tb-ping"><div class="tb-pdot"></div><span id="latVal">—</span></div>
+      <div class="tb-ping"><div class="tb-pdot"></div><span id="latVal">-</span></div>
     </div>
     <div class="term-frame">
       <div class="term-inner">
@@ -941,11 +924,11 @@ html, body {
     <div class="insp-hd">Session</div>
     <div class="si-tbl">
       <div class="si-row"><span class="si-k">Status</span><span class="si-v dim" id="si-status">Offline</span></div>
-      <div class="si-row"><span class="si-k">Target</span><span class="si-v red" id="si-target">—</span></div>
-      <div class="si-row"><span class="si-k">Hostname</span><span class="si-v" id="si-host">—</span></div>
-      <div class="si-row"><span class="si-k">User</span><span class="si-v" id="si-user">—</span></div>
-      <div class="si-row"><span class="si-k">IP</span><span class="si-v" id="si-ip">—</span></div>
-      <div class="si-row"><span class="si-k">Connected</span><span class="si-v" id="si-conn">—</span></div>
+      <div class="si-row"><span class="si-k">Target</span><span class="si-v red" id="si-target">-</span></div>
+      <div class="si-row"><span class="si-k">Hostname</span><span class="si-v" id="si-host">-</span></div>
+      <div class="si-row"><span class="si-k">User</span><span class="si-v" id="si-user">-</span></div>
+      <div class="si-row"><span class="si-k">IP</span><span class="si-v" id="si-ip">-</span></div>
+      <div class="si-row"><span class="si-k">Connected</span><span class="si-v" id="si-conn">-</span></div>
       <div class="si-row"><span class="si-k">Commands</span><span class="si-v green" id="si-cmds">0</span></div>
     </div>
   </div>
@@ -964,7 +947,7 @@ html, body {
 
 <script>
 /* ══════════════════════════════════════
-   RICH BACKGROUND — hex grid + particles + data streams
+   RICH BACKGROUND - hex grid + particles + data streams
 ══════════════════════════════════════ */
 (function(){
   const cv = document.getElementById('bgCanvas');
@@ -1178,16 +1161,6 @@ function tick(){
   document.getElementById('hdate').textContent=`${DAYS[n.getDay()]} ${MON[n.getMonth()]} ${n.getDate()} ${n.getFullYear()}`;
 }
 
-function tickStats(){
-  const cpu=12+Math.random()*65;
-  document.getElementById('cpu-val').textContent=`${cpu.toFixed(1)}%`;
-  document.getElementById('cpu-fill').style.width=`${cpu}%`;
-  const ram=3.2+Math.random()*10;
-  document.getElementById('mem-val').textContent=`${ram.toFixed(1)} GB`;
-  document.getElementById('mem-fill').style.width=`${(ram/16)*100}%`;
-  document.getElementById('net-val').textContent=`${Math.floor(35+Math.random()*420)} KB/s`;
-  if(target) document.getElementById('latVal').textContent=`${Math.floor(4+Math.random()*34)}ms`;
-}
 
 function addLine(text,type='out'){
   const out=document.getElementById('termOut');
@@ -1215,9 +1188,9 @@ function goOnline(key,data){
   document.getElementById('si-status').textContent='Online';
   document.getElementById('si-status').className='si-v green';
   document.getElementById('si-target').textContent=key;
-  document.getElementById('si-host').textContent=data?.hostname||'—';
-  document.getElementById('si-user').textContent=data?.username||'—';
-  document.getElementById('si-ip').textContent=data?.ip||'—';
+  document.getElementById('si-host').textContent=data?.hostname||'-';
+  document.getElementById('si-user').textContent=data?.username||'-';
+  document.getElementById('si-ip').textContent=data?.ip||'-';
   document.getElementById('si-conn').textContent=ts();
 }
 function goOffline(){
@@ -1231,7 +1204,7 @@ function goOffline(){
   document.getElementById('sb-tgt').textContent='none';
   document.getElementById('si-status').textContent='Offline';
   document.getElementById('si-status').className='si-v dim';
-  document.getElementById('si-conn').textContent='—';
+  document.getElementById('si-conn').textContent='-';
 }
 
 async function loadSessions(){
@@ -1246,7 +1219,7 @@ async function loadSessions(){
     }
     list.innerHTML=clients.map((c,i)=>{
       const ini=(c.hostname||'??').substring(0,2).toUpperCase();
-      return `<div class="sc ${target===c.key?'active':''} rip" style="animation-delay:${i*55}ms" onclick="selectSess('${esc(c.key)}',${JSON.stringify(c).replace(/"/g,'&quot;')})"><div class="sc-shim"></div><div class="sc-row"><div class="sc-av">${ini}</div><div class="sc-info"><div class="sc-host">${esc(c.hostname||c.key)}</div><div class="sc-ip">${esc(c.ip||'—')}</div></div><div class="sc-live"></div></div><div class="sc-foot"><span class="sc-tag on">● live</span><span class="sc-usr">${esc(c.username||'—')}</span></div></div>`;
+      return `<div class="sc ${target===c.key?'active':''} rip" style="animation-delay:${i*55}ms" onclick="selectSess('${esc(c.key)}',${JSON.stringify(c).replace(/"/g,'&quot;')})"><div class="sc-shim"></div><div class="sc-row"><div class="sc-av">${ini}</div><div class="sc-info"><div class="sc-host">${esc(c.hostname||c.key)}</div><div class="sc-ip">${esc(c.ip||'-')}</div></div><div class="sc-live"></div></div><div class="sc-foot"><span class="sc-tag on">● live</span><span class="sc-usr">${esc(c.username||'-')}</span></div></div>`;
     }).join('');
     clients.forEach(c=>store[c.key]=c);
   }catch(_){}
@@ -1283,7 +1256,6 @@ const BOOT=[
   ['SIMPLEAF  ·  Remote Administration Console  ·  v2.0','ok',0],
   ['──────────────────────────────────────────────────','div',80],
   ['agent listener     →  port 8080','inf',300],
-  ['crypto module      →  initialized','inf',520],
   ['shell engine       →  ready','inf',740],
   ['keylogger module   →  standby','inf',960],
   ['screenshot engine  →  ready','inf',1180],
@@ -1292,8 +1264,8 @@ const BOOT=[
 ];
 BOOT.forEach(([t,ty,d])=>setTimeout(()=>addLine(t,ty),d));
 
-setInterval(tick,1000);setInterval(tickStats,2400);setInterval(loadSessions,3000);
-tick();tickStats();setTimeout(loadSessions,1200);
+setInterval(tick,1000);setInterval(loadSessions,3000);
+tick();setTimeout(loadSessions,1200);
 </script>
 </body>
 </html>
